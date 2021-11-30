@@ -50,6 +50,7 @@ int main(int argc, char **argv)
   const char  *op_table       = NULL;
   const char  *op_key         = NULL;
   const char  *op_columns     = NULL;
+  const char  *op_where       = NULL;
   const char  *op_separator   = SEPARATOR;
   int         op_interval     = INTERVAL;
   int         op_n            = LINES;
@@ -72,6 +73,7 @@ int main(int argc, char **argv)
     {"username",  required_argument, NULL, 'U'},
     {"password",  no_argument,       NULL, 'W'},
     {"table",     required_argument, NULL, 't'},
+    {"where",     required_argument, NULL, 'w'},
     {"columns",   required_argument, NULL, 'c'},
     {"separator", required_argument, NULL, 's'},
     {"interval",  required_argument, NULL, 'i'},
@@ -88,7 +90,7 @@ int main(int argc, char **argv)
     exit_nicely(0);
   }
 
-  while ((c = getopt_long(argc, argv, "d:h:p:t:c:i:s:n:U:Wv", long_options, &optindex)) != -1) {
+  while ((c = getopt_long(argc, argv, "d:h:p:t:c:i:s:n:U:w:Wv", long_options, &optindex)) != -1) {
 
     switch (c) {
 
@@ -129,7 +131,11 @@ int main(int argc, char **argv)
       case 'U':
         op_username = strdup(optarg);
         break;
-      
+
+      case 'w':
+        op_where = strdup(optarg);
+        break;
+
       case 'W':
         password = getpass("Password: ");
         break;
@@ -161,12 +167,12 @@ int main(int argc, char **argv)
 
     if(current_key)
       snprintf(query, sizeof(query),
-        "SELECT %s FROM %s WHERE %s > '%s' ORDER BY %s ASC",
-        op_columns, op_table, op_key, current_key, op_key);
+        "SELECT %s FROM %s WHERE %s > '%s' %s ORDER BY %s ASC",
+        op_columns, op_table, op_key, current_key, op_where?op_where:"", op_key);
     else
       snprintf(query, sizeof(query),
-       "SELECT * FROM (SELECT %s FROM %s ORDER BY %s DESC LIMIT %d) AS tmp ORDER BY %s ASC",
-        op_columns, op_table, op_key, op_n, op_key);
+       "SELECT * FROM (SELECT %s FROM %s WHERE true %s ORDER BY %s DESC LIMIT %d) AS tmp ORDER BY %s ASC",
+        op_columns, op_table, op_where?op_where:"", op_key, op_n, op_key);
 
     res = PQexec(conn, query);
     if(PQresultStatus(res) != PGRES_TUPLES_OK) {
